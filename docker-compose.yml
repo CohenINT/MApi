@@ -1,0 +1,6 @@
+﻿services:
+  duplicateindexer:
+    image: duplicateindexer
+    build:
+      context: .
+      dockerfile: DuplicateIndexer/Dockerfile
