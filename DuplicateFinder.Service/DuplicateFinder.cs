@@ -30,34 +30,54 @@ public class DuplicateFinder
 
     public Task<bool> GetFileDetails(string path)
     {
-        var files = Directory.GetFileSystemEntries(path,"*", SearchOption.AllDirectories).ToList();
- 
+        var files = Directory.GetFileSystemEntries(path, "*", SearchOption.AllDirectories).ToList();
+
         return null;
+    }
+
+
+    public async Task ProcessFileAsync(string path)
+    {
+        return;
     }
 
     public async Task<string> IndexAllFilesAsync(string pathToFolder)
     {
-       
         var filesAndDirectories = Directory.GetFileSystemEntries(pathToFolder);
-        
-
-        foreach (var fd in filesAndDirectories)
+        var tasks = filesAndDirectories.Select(fd =>
         {
             if (Directory.Exists(fd))
-            { // directory
-                return await Task.FromResult(fd);
+            {
+                // directory
+                return IndexAllFilesAsync(fd);
             }
-            
+
             else if (File.Exists(fd))
-            { // file
-                
+            {
+                // file
+                // Note: can start processing this specific file, no need to wait for an answer.
+                return ProcessFileAsync(fd);
             }
-        }
+
+            return Task.CompletedTask;
+        });
+
+        await Task.WhenAll(tasks);
+        return "DONE";
+        // foreach (var fd in filesAndDirectories)
+        // {
+        //     if (Directory.Exists(fd))
+        //     { // directory
+        //         return await Task.FromResult(fd);
+        //     }
+        //     
+        //     else if (File.Exists(fd))
+        //     { // file
+        //         // Note: can start processing this specific file, no need to wait for an answer.
+        //          ProcessFileAsync(fd);
+        //     }
+        // }
 
 
-        return null;
     }
-    
-    
-    
 }
