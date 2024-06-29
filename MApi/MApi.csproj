@@ -23,4 +23,8 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="7.0.11" />
     <PackageReference Include="NSwag.AspNetCore" Version="14.0.8" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DuplicateFinder.Service\DuplicateFinder.Service.csproj" />
+    <ProjectReference Include="..\DuplicateIndexer\DuplicateIndexer.csproj" />
+  </ItemGroup>
 </Project>
