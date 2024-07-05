@@ -10,8 +10,9 @@ public class FileData
 {
     public string FileName { get; set; }
     public string FileType { get; set; }
-    public double SizeInMB { get; set; }
-    public int DuplicateCount { get; set; }
+    public long SizeInMB { get; set; }
+    public int? DuplicateCount { get; set; }
+    public string HashedValue { set; get; }
 }
 
 public class DuplicateFinder
@@ -19,32 +20,53 @@ public class DuplicateFinder
     public ILogger<DuplicateFinder> log { set; get; }
     public IServiceProvider services { get; set; }
     public static SHA256 sha256 = SHA256.Create();
-    public ConcurrentDictionary<string, FileData> fileNames { set; get; }
+    public ConcurrentDictionary<string, List<FileData>> fileNames { set; get; }
+
+    private async Task<string> HashFile(string path)
+    {
+        this.log.LogInformation($"[{path}] : Begin hashing.");
+        await using var stream = new FileStream(path, FileMode.Open);
+        var hashedValue = await sha256.ComputeHashAsync(stream);
+        var resultString = Convert.ToHexString(hashedValue);
+        this.log.LogInformation($"[{path}] : Hashing complete.");
+        return resultString;
+    }
+    
+   
+
+    private async Task ExtractAndSaveFileData(string path)
+    {
+        var HashValueTask = HashFile(path);
+        var info = new FileInfo(path);
+        
+        var fd = new FileData()
+        {
+            FileName = info.Name,
+            FileType = info.Extension,
+            DuplicateCount = null,//TODO: how do i update this property? each one? does not make sense. find other way.
+            SizeInMB = info.Length * 1024,
+            HashedValue = await HashValueTask
+        };
+
+        this.fileNames.AddOrUpdate(fd.HashedValue, _ => new List<FileData>(), (key, existingList) =>
+        {
+            existingList.Add(fd);
+            return existingList;
+        });
+
+    }
 
     public DuplicateFinder(IServiceProvider svc)
     {
         this.services = svc;
         this.log = this.services.GetRequiredService<ILogger<DuplicateFinder>>();
-        this.fileNames = new ConcurrentDictionary<string, FileData>();
+        this.fileNames = new ConcurrentDictionary<string, List<FileData>>();
     }
-
-    public Task<bool> GetFileDetails(string path)
-    {
-        var files = Directory.GetFileSystemEntries(path, "*", SearchOption.AllDirectories).ToList();
-
-        return null;
-    }
-
-
-    public async Task ProcessFileAsync(string path)
-    {
-        return;
-    }
-
-    public async Task<string> IndexAllFilesAsync(string pathToFolder)
+    
+    public async Task IndexAllFilesAsync(string pathToFolder)
     {
         var filesAndDirectories = Directory.GetFileSystemEntries(pathToFolder);
-        var tasks = filesAndDirectories.Select(fd =>
+        var tasks =  filesAndDirectories.Select(fd =>
         {
             if (Directory.Exists(fd))
             {
@@ -56,28 +78,14 @@ public class DuplicateFinder
             {
                 // file
                 // Note: can start processing this specific file, no need to wait for an answer.
-                return ProcessFileAsync(fd);
+                return ExtractAndSaveFileData(fd);
             }
 
             return Task.CompletedTask;
         });
-
+        
         await Task.WhenAll(tasks);
-        return "DONE";
-        // foreach (var fd in filesAndDirectories)
-        // {
-        //     if (Directory.Exists(fd))
-        //     { // directory
-        //         return await Task.FromResult(fd);
-        //     }
-        //     
-        //     else if (File.Exists(fd))
-        //     { // file
-        //         // Note: can start processing this specific file, no need to wait for an answer.
-        //          ProcessFileAsync(fd);
-        //     }
-        // }
-
+        return;
 
     }
 }
