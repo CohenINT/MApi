@@ -3,6 +3,7 @@ using System.Runtime.Intrinsics.Arm;
 using System.Security.Cryptography;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace DuplicateFinder.Service;
 
@@ -10,8 +11,7 @@ public class FileData
 {
     public string FileName { get; set; }
     public string FileType { get; set; }
-    public long SizeInMB { get; set; }
-    public int? DuplicateCount { get; set; }
+    public decimal SizeInMB { get; set; }
     public string HashedValue { set; get; }
 }
 
@@ -25,35 +25,53 @@ public class DuplicateFinder
     private async Task<string> HashFile(string path)
     {
         this.log.LogInformation($"[{path}] : Begin hashing.");
-        await using var stream = new FileStream(path, FileMode.Open);
-        var hashedValue = await sha256.ComputeHashAsync(stream);
-        var resultString = Convert.ToHexString(hashedValue);
+
+        var resultString = "";
+        try
+        {
+            await using var stream = File.OpenRead(path);
+            var hashedValue = await sha256.ComputeHashAsync(stream);
+            resultString = Convert.ToHexString(hashedValue);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            log.LogError(e,$"Failed to read from path: {path}");
+        }
+        
         this.log.LogInformation($"[{path}] : Hashing complete.");
+
         return resultString;
     }
-    
-   
+
 
     private async Task ExtractAndSaveFileData(string path)
     {
-        var HashValueTask = HashFile(path);
+        var hashstring = "";
+        try
+        {
+            hashstring = await HashFile(path);
+        }
+        catch (Exception e)
+        {
+            log.LogError(e, $"failed to compute hash for : {path}");
+        }
+
         var info = new FileInfo(path);
         
         var fd = new FileData()
         {
             FileName = info.Name,
             FileType = info.Extension,
-            DuplicateCount = null,//TODO: how do i update this property? each one? does not make sense. find other way.
-            SizeInMB = info.Length * 1024,
-            HashedValue = await HashValueTask
+            SizeInMB = Math.Round((decimal.Add( info.Length,0) / 1024) / 1024,4),
+            HashedValue = hashstring
         };
 
-        this.fileNames.AddOrUpdate(fd.HashedValue, _ => new List<FileData>(), (key, existingList) =>
+        this.fileNames.AddOrUpdate(fd.HashedValue, (key) => new List<FileData>() { fd }, (key, existingList) =>
         {
             existingList.Add(fd);
             return existingList;
         });
-
     }
 
     public DuplicateFinder(IServiceProvider svc)
@@ -62,11 +80,26 @@ public class DuplicateFinder
         this.log = this.services.GetRequiredService<ILogger<DuplicateFinder>>();
         this.fileNames = new ConcurrentDictionary<string, List<FileData>>();
     }
-    
+
+    public string ExportIndexToJSON()
+    {
+        var strData = "";
+        try
+        {
+            strData = JsonConvert.SerializeObject(this.fileNames, Formatting.Indented);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+
+        return strData;
+    }
+
     public async Task IndexAllFilesAsync(string pathToFolder)
     {
         var filesAndDirectories = Directory.GetFileSystemEntries(pathToFolder);
-        var tasks =  filesAndDirectories.Select(fd =>
+        var tasks = filesAndDirectories.Select(fd =>
         {
             if (Directory.Exists(fd))
             {
@@ -83,9 +116,8 @@ public class DuplicateFinder
 
             return Task.CompletedTask;
         });
-        
+
         await Task.WhenAll(tasks);
         return;
-
     }
 }

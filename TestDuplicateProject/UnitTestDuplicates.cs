@@ -1,6 +1,6 @@
 
 using Microsoft.Extensions.DependencyInjection;
- 
+using Microsoft.Extensions.Logging;
 namespace TestDuplicateProject;
 
 public static class TestServiceProvider
@@ -8,10 +8,13 @@ public static class TestServiceProvider
     public static IServiceProvider BuildServiceProvider(Action<IServiceCollection> configureServices = null)
     {
         var services = new ServiceCollection();
-
+         
         services.AddSingleton<DuplicateFinder.Service.DuplicateFinder>();
-        // Allow custom configuration
-        configureServices?.Invoke(services);
+        services.AddLogging(b =>
+        {
+            b.AddConsole();
+            b.AddDebug();
+        });
 
         return services.BuildServiceProvider();
     }
@@ -24,13 +27,17 @@ public class UnitTestDuplicates
 
     public UnitTestDuplicates()
     {
-       this._serviceProvider = TestServiceProvider.BuildServiceProvider();
+        this._serviceProvider = TestServiceProvider.BuildServiceProvider();
     }
     [TestMethod]
     public async Task TestGetFiles()
     {
         var svc = new DuplicateFinder.Service.DuplicateFinder(_serviceProvider);
-        var path = "";
-        await svc.GetFilesAsync(path);
+        var path = "/Users/moshecohen/test/gen/";//"/Users/moshecohen/test";
+        var destPath = "/Users/moshecohen/test/genIndex.json";
+        await svc.IndexAllFilesAsync(path);
+        var data = svc.ExportIndexToJSON();
+        await File.WriteAllTextAsync(destPath, data);
+        var temp = "";
     }
 }
