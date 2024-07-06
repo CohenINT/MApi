@@ -36,7 +36,7 @@ public class UnitTestDuplicates
         var path = "/Users/moshecohen/Documents/Unreal Projects/BotArena";//"/Users/moshecohen/test";
         var destPath = "/Users/moshecohen/Documents/Unreal Projects/BotArena/BotArenaIndex.json";
         await svc.IndexAllFilesAsync(path);
-        var data = svc.ExportIndexToJSON();
+        var data = await svc.ExportIndexToJSON();
         await File.WriteAllTextAsync(destPath, data);
         var temp = "";
     }

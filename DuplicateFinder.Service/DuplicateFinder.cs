@@ -32,14 +32,15 @@ public class DuplicateFinder
         {
             await using var stream = File.OpenRead(path);
             var hashedValue = await sha256.ComputeHashAsync(stream);
+            await stream.FlushAsync();
             resultString = Convert.ToHexString(hashedValue);
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
-            log.LogError(e,$"Failed to read from path: {path}");
+            log.LogError(e, $"Failed to read from path: {path}");
         }
-        
+
         this.log.LogInformation($"[{path}] : Hashing complete.");
 
         return resultString;
@@ -59,19 +60,16 @@ public class DuplicateFinder
         }
 
         var info = new FileInfo(path);
-        
+
         var fd = new FileData()
         {
             FileName = info.Name,
             FileType = info.Extension,
-            SizeInMB = Math.Round((decimal.Add( info.Length,0) / 1024) / 1024,4),
+            SizeInMB = Math.Round((decimal.Add(info.Length, 0) / 1024) / 1024, 4),
             HashedValue = hashstring,
             FullFilePath = path
         };
-        if (fd.FileName == "MacTargetPlatform.630.rsp")
-        {
-            
-        }
+
         this.fileNames.AddOrUpdate(fd.HashedValue, (key) => new List<FileData>() { fd }, (key, existingList) =>
         {
             existingList.Add(fd);
@@ -86,16 +84,18 @@ public class DuplicateFinder
         this.fileNames = new ConcurrentDictionary<string, List<FileData>>();
     }
 
-    public string ExportIndexToJSON()
+    public async Task<string> ExportIndexToJSON(string pathToSave = "")
     {
         var strData = "";
         try
         {
             strData = JsonConvert.SerializeObject(this.fileNames, Formatting.Indented);
+            if (!string.IsNullOrEmpty(pathToSave))
+                await File.WriteAllTextAsync(pathToSave, strData);
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            log.LogError(e, $"failed to convert the data to json format string");
         }
 
         return strData;
