@@ -12,6 +12,7 @@ public class FileData
     public string FileName { get; set; }
     public string FileType { get; set; }
     public decimal SizeInMB { get; set; }
+    public string FullFilePath { set; get; }
     public string HashedValue { set; get; }
 }
 
@@ -64,9 +65,13 @@ public class DuplicateFinder
             FileName = info.Name,
             FileType = info.Extension,
             SizeInMB = Math.Round((decimal.Add( info.Length,0) / 1024) / 1024,4),
-            HashedValue = hashstring
+            HashedValue = hashstring,
+            FullFilePath = path
         };
-
+        if (fd.FileName == "MacTargetPlatform.630.rsp")
+        {
+            
+        }
         this.fileNames.AddOrUpdate(fd.HashedValue, (key) => new List<FileData>() { fd }, (key, existingList) =>
         {
             existingList.Add(fd);
