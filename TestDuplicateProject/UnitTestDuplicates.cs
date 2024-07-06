@@ -26,18 +26,19 @@ public class UnitTestDuplicates
     private IServiceProvider _serviceProvider;
 
     public UnitTestDuplicates()
-    {
+    {                               
         this._serviceProvider = TestServiceProvider.BuildServiceProvider();
     }
-    [TestMethod]
+    [TestMethod]                    
     public async Task TestGetFiles()
     {
         var svc = new DuplicateFinder.Service.DuplicateFinder(_serviceProvider);
-        var path = "/Users/moshecohen/Documents/Unreal Projects/BotArena";//"/Users/moshecohen/test";
-        var destPath = "/Users/moshecohen/Documents/Unreal Projects/BotArena/BotArenaIndex.json";
+        var path = "/Users/moshecohen/Documents/projects/UnrealEngine";//"/Users/moshecohen/test";
+        var destPath = "/Users/moshecohen/Documents/projects/UnrealEngine/UE5Index.json";
         await svc.IndexAllFilesAsync(path);
         var data = await svc.ExportIndexToJSON();
         await File.WriteAllTextAsync(destPath, data);
+        var count = svc.fileNames.Values.Count();       
         var temp = "";
     }
-}
+}       
