@@ -18,6 +18,16 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DuplicateFinder.Service", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestDuplicateProject", "TestDuplicateProject\TestDuplicateProject.csproj", "{120D2A90-1C2F-4E5A-9D2E-0022EE4CC10E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvaloniaApplication1", "AvaloniaApplication1\AvaloniaApplication1\AvaloniaApplication1.csproj", "{20D290DE-91BD-4D3B-B441-C445A328EB16}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvaloniaApplication1.Android", "AvaloniaApplication1\AvaloniaApplication1.Android\AvaloniaApplication1.Android.csproj", "{8D76A822-719B-4910-93F5-DEEDB946CC3B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvaloniaApplication1.Desktop", "AvaloniaApplication1\AvaloniaApplication1.Desktop\AvaloniaApplication1.Desktop.csproj", "{A03A5633-CE2E-46E7-97BB-B4F9D2BEFBCD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvaloniaApplication1.iOS", "AvaloniaApplication1\AvaloniaApplication1.iOS\AvaloniaApplication1.iOS.csproj", "{4B6A19FD-3BFD-424E-AA5C-75625997CE56}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvaloniaApplication1.Browser", "AvaloniaApplication1\AvaloniaApplication1.Browser\AvaloniaApplication1.Browser.csproj", "{64F36467-C994-482E-9BD1-102E98CE1BE8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -44,6 +54,26 @@ Global
 		{120D2A90-1C2F-4E5A-9D2E-0022EE4CC10E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{120D2A90-1C2F-4E5A-9D2E-0022EE4CC10E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{120D2A90-1C2F-4E5A-9D2E-0022EE4CC10E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{20D290DE-91BD-4D3B-B441-C445A328EB16}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{20D290DE-91BD-4D3B-B441-C445A328EB16}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{20D290DE-91BD-4D3B-B441-C445A328EB16}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{20D290DE-91BD-4D3B-B441-C445A328EB16}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8D76A822-719B-4910-93F5-DEEDB946CC3B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8D76A822-719B-4910-93F5-DEEDB946CC3B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8D76A822-719B-4910-93F5-DEEDB946CC3B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8D76A822-719B-4910-93F5-DEEDB946CC3B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A03A5633-CE2E-46E7-97BB-B4F9D2BEFBCD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A03A5633-CE2E-46E7-97BB-B4F9D2BEFBCD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A03A5633-CE2E-46E7-97BB-B4F9D2BEFBCD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A03A5633-CE2E-46E7-97BB-B4F9D2BEFBCD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4B6A19FD-3BFD-424E-AA5C-75625997CE56}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4B6A19FD-3BFD-424E-AA5C-75625997CE56}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4B6A19FD-3BFD-424E-AA5C-75625997CE56}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4B6A19FD-3BFD-424E-AA5C-75625997CE56}.Release|Any CPU.Build.0 = Release|Any CPU
+		{64F36467-C994-482E-9BD1-102E98CE1BE8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{64F36467-C994-482E-9BD1-102E98CE1BE8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{64F36467-C994-482E-9BD1-102E98CE1BE8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{64F36467-C994-482E-9BD1-102E98CE1BE8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

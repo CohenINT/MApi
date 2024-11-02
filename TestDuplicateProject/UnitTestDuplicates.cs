@@ -33,12 +33,13 @@ public class UnitTestDuplicates
     public async Task TestGetFiles()
     {
         var svc = new DuplicateFinder.Service.DuplicateFinder(_serviceProvider);
-        var path = "/Users/moshecohen/Documents/projects/UnrealEngine";//"/Users/moshecohen/test";
-        var destPath = "/Users/moshecohen/Documents/projects/UnrealEngine/UE5Index.json";
-        await svc.IndexAllFilesAsync(path);
-        var data = await svc.ExportIndexToJSON();
-        await File.WriteAllTextAsync(destPath, data);
-        var count = svc.fileNames.Values.Count();       
+        var path = "/Users/moshecohen/Documents/projects";
+        var destPath = "/Users/moshecohen/Documents/projects/Folderindex.json";
+        await svc.Init(path);
+        // var data = await svc.ExportIndexToJSON();
+        // await File.WriteAllTextAsync(destPath, data);
+        // var count = svc.fileNames.Values.Count();       
+        await svc.ExportIndexToJson(destPath);
         var temp = "";
     }
 }       

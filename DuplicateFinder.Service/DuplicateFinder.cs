@@ -1,11 +1,22 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Runtime.Intrinsics.Arm;
 using System.Security.Cryptography;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using System.Reactive;
+using System.Reactive.Linq;
+using System.Reactive.Threading.Tasks;
 
 namespace DuplicateFinder.Service;
+
+public enum StateEnum
+{
+    InProgress,
+    Completed,
+    Error
+}
 
 public class FileData
 {
@@ -18,31 +29,29 @@ public class FileData
 
 public class DuplicateFinder
 {
-    public ILogger<DuplicateFinder> log { set; get; }
-    public IServiceProvider services { get; set; }
-    public static SHA256 sha256 = SHA256.Create();
-    public ConcurrentDictionary<string, List<FileData>> fileNames { set; get; }
+    private ILogger<DuplicateFinder> Log { set; get; }
+    private IServiceProvider Services { get; set; }
+    private static readonly SHA256 Sha256 = SHA256.Create();
+    private ConcurrentQueue<string> PathsQueue { set; get; }
+    private ConcurrentDictionary<string, List<FileData>> FileNames { set; get; }
 
     private async Task<string> HashFile(string path)
     {
-        this.log.LogInformation($"[{path}] : Begin hashing.");
-
+        this.Log.LogInformation($"[{path}] : Begin hashing.");
         var resultString = "";
         try
         {
             await using var stream = File.OpenRead(path);
-            var hashedValue = await sha256.ComputeHashAsync(stream);
-            await stream.FlushAsync();
-            resultString = Convert.ToHexString(hashedValue);
+            //var hashedValue = await Sha256.ComputeHashAsync(stream);
+            resultString = Convert.ToHexString(await Sha256.ComputeHashAsync(stream));
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
-            log.LogError(e, $"Failed to read from path: {path}");
+            Log.LogError(e, $"Failed to read from path: {path}");
         }
 
-        this.log.LogInformation($"[{path}] : Hashing complete.");
-
+        this.Log.LogInformation($"[{path}] : Hashing complete.");
         return resultString;
     }
 
@@ -56,11 +65,10 @@ public class DuplicateFinder
         }
         catch (Exception e)
         {
-            log.LogError(e, $"failed to compute hash for : {path}");
+            Log.LogError(e, $"failed to compute hash for : {path}");
         }
 
         var info = new FileInfo(path);
-
         var fd = new FileData()
         {
             FileName = info.Name,
@@ -70,7 +78,9 @@ public class DuplicateFinder
             FullFilePath = path
         };
 
-        this.fileNames.AddOrUpdate(fd.HashedValue, (key) => new List<FileData>() { fd }, (key, existingList) =>
+        hashstring = null;
+        info = null;
+        this.FileNames.AddOrUpdate(fd.HashedValue, (key) => new List<FileData>() { fd }, (key, existingList) =>
         {
             existingList.Add(fd);
             return existingList;
@@ -79,28 +89,54 @@ public class DuplicateFinder
 
     public DuplicateFinder(IServiceProvider svc)
     {
-        this.services = svc;
-        this.log = this.services.GetRequiredService<ILogger<DuplicateFinder>>();
-        this.fileNames = new ConcurrentDictionary<string, List<FileData>>();
+        this.Services = svc;
+        this.Log = this.Services.GetRequiredService<ILogger<DuplicateFinder>>();
+        this.FileNames = new ConcurrentDictionary<string, List<FileData>>();
+        this.PathsQueue = new ConcurrentQueue<string>();
     }
 
-    public async Task<string> ExportIndexToJSON(string pathToSave = "")
+    public async Task<string> ExportIndexToJson(string pathToSave = "")
     {
         var strData = "";
         try
         {
-            strData = JsonConvert.SerializeObject(this.fileNames, Formatting.Indented);
+            strData = JsonConvert.SerializeObject(this.FileNames, Formatting.Indented);
             if (!string.IsNullOrEmpty(pathToSave))
                 await File.WriteAllTextAsync(pathToSave, strData);
         }
         catch (Exception e)
         {
-            log.LogError(e, $"failed to convert the data to json format string");
+            Log.LogError(e, $"failed to convert the data to json format string");
         }
-
+        Log.LogInformation($"Exported completed to {pathToSave}.  amount of paths: {this.PathsQueue.Count}. total files: {this.FileNames.Count}.");
         return strData;
     }
 
+    
+    
+    public async Task IndexAllFilesAsyncV2(string pathToFolder)
+    {
+        _ = await Directory.GetFileSystemEntries(pathToFolder)
+            .ToObservable()
+            .Select(fd => Observable.FromAsync(async () =>
+            {
+                if (Directory.Exists(fd))
+                {
+                    // directory
+                    return IndexAllFilesAsyncV2(fd);
+                }
+
+                else if (File.Exists(fd))
+                {
+                    // file
+                    this.PathsQueue.Enqueue(fd);
+                }
+
+                return Task.CompletedTask;
+            }))
+            .Merge(10)
+            .LastOrDefaultAsync();
+    }
     public async Task IndexAllFilesAsync(string pathToFolder)
     {
         var filesAndDirectories = Directory.GetFileSystemEntries(pathToFolder);
@@ -115,14 +151,39 @@ public class DuplicateFinder
             else if (File.Exists(fd))
             {
                 // file
-                // Note: can start processing this specific file, no need to wait for an answer.
-                return ExtractAndSaveFileData(fd);
+                this.PathsQueue.Enqueue(fd);
             }
 
             return Task.CompletedTask;
         });
 
         await Task.WhenAll(tasks);
-        return;
+    }
+
+    public async Task ProcessFilesAsync()
+    {
+        _ = await this.PathsQueue
+            .ToObservable()
+            .Select(p => Observable.FromAsync(async () =>
+            {
+                 await ExtractAndSaveFileData(p);
+            }))
+            .Merge(500)
+            .LastOrDefaultAsync();
+    }
+
+    public async Task Init(string path)
+    {
+        Log.LogInformation("Init start");
+        Stopwatch st = new Stopwatch();
+        st.Start();
+        await IndexAllFilesAsync(path);
+        st.Stop();
+        Log.LogInformation($"index completed in {st.ElapsedMilliseconds} ms.");
+        st.Reset();
+        st.Start();
+        await ProcessFilesAsync();
+        st.Stop();
+        Log.LogInformation($"ProcessFile completed in {st.ElapsedMilliseconds} ms.");
     }
 }
