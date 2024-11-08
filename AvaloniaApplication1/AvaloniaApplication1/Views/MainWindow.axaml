@@ -8,5 +8,23 @@
         x:Class="AvaloniaApplication1.Views.MainWindow"
         Icon="/Assets/avalonia-logo.ico"
         Title="AvaloniaApplication1">
-        <views:MainView />
+
+    <StackPanel Margin="10">
+
+
+        <Label Content="Looking for certain address?"
+               Margin="0,0,0,5" />
+
+        <Grid>
+            <TextBox Name="SearchBox"  Width="400" Margin="10" HorizontalAlignment="Left" VerticalAlignment="Top" Watermark="Search..." />
+            <Button    Content="Run Process Indexing" Width="160" Height="30" Margin="250,40,0,0" HorizontalAlignment="Left"
+                    VerticalAlignment="Top" Click="ClickHandler" />
+            <Button  Content="Select Folder" Margin="10,40,0,0" HorizontalAlignment="Left"  VerticalAlignment="Top"
+                    Click="OnSelectFolderButtonClick"/>
+        </Grid>
+
+     <Grid>
+       
+     </Grid>
+    </StackPanel>
 </Window>

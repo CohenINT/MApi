@@ -22,7 +22,9 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\DuplicateFinder.Service\DuplicateFinder.Service.csproj" />
+      <Reference Include="DuplicateFinder.Service">
+        <HintPath>..\DuplicateIndexer\bin\Debug\net7.0\DuplicateFinder.Service.dll</HintPath>
+      </Reference>
     </ItemGroup>
 
 </Project>

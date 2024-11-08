@@ -34,21 +34,46 @@ public class DuplicateFinder
     private static readonly SHA256 Sha256 = SHA256.Create();
     private ConcurrentQueue<string> PathsQueue { set; get; }
     private ConcurrentDictionary<string, List<FileData>> FileNames { set; get; }
+    private ConcurrentBag<string> FailedFiles { set; get; }   
+    private ConcurrentBag<string> SuccedFiles { set; get; }
+    private int TotalTask { set; get; }
 
-    private async Task<string> HashFile(string path)
+    private async Task<string> GetFileHashV1(string path)
+    {
+        await using var stream = File.OpenRead(path);
+        byte[] buff = null;
+        await stream.ReadExactlyAsync(buff);
+        var result = Convert.ToHexString(await Sha256.ComputeHashAsync(stream));
+        return result;
+    }
+
+    private async Task<string> GetFileHashV2(string path)
+    {
+        await using FileStream fileStream = File.OpenRead(path);
+        byte[] checksum  =  await Sha256.ComputeHashAsync(fileStream); 
+        return BitConverter.ToString(checksum).Replace("-", String.Empty);
+
+    }
+
+    private async Task<string> GetFileHashV3(string path)
+    {
+        await using FileStream fileStream = File.OpenRead(path);
+        var checksum  =   await MD5.HashDataAsync(fileStream);
+        return BitConverter.ToString(checksum).Replace("-", String.Empty);
+    }
+    public async Task<string> HashFile(string path)
     {
         this.Log.LogInformation($"[{path}] : Begin hashing.");
         var resultString = "";
         try
         {
-            await using var stream = File.OpenRead(path);
-            //var hashedValue = await Sha256.ComputeHashAsync(stream);
-            resultString = Convert.ToHexString(await Sha256.ComputeHashAsync(stream));
+            resultString = await GetFileHashV3(path);
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
             Log.LogError(e, $"Failed to read from path: {path}");
+            throw new Exception( $"Failed to read from path: {path}",e);
         }
 
         this.Log.LogInformation($"[{path}] : Hashing complete.");
@@ -63,9 +88,11 @@ public class DuplicateFinder
         {
             hashstring = await HashFile(path);
         }
-        catch (Exception e)
+        catch (Exception eס)
         {
-            Log.LogError(e, $"failed to compute hash for : {path}");
+            Log.LogError(eס, $"failed to compute hash for : {path}. failed processing this file.");
+            this.FailedFiles.Add(path);
+            return;
         }
 
         var info = new FileInfo(path);
@@ -85,6 +112,9 @@ public class DuplicateFinder
             existingList.Add(fd);
             return existingList;
         });
+        
+        this.SuccedFiles.Add(path);
+        Log.LogInformation($"File Process Succeeded for : {path}");
     }
 
     public DuplicateFinder(IServiceProvider svc)
@@ -93,7 +123,10 @@ public class DuplicateFinder
         this.Log = this.Services.GetRequiredService<ILogger<DuplicateFinder>>();
         this.FileNames = new ConcurrentDictionary<string, List<FileData>>();
         this.PathsQueue = new ConcurrentQueue<string>();
+        this.FailedFiles = new ConcurrentBag<string>();
+        this.SuccedFiles = new ConcurrentBag<string>();
     }
+
 
     public async Task<string> ExportIndexToJson(string pathToSave = "")
     {
@@ -158,26 +191,29 @@ public class DuplicateFinder
         });
 
         await Task.WhenAll(tasks);
+        this.TotalTask = tasks.Count();
+        Log.LogInformation($"Total jobs to execute: {this.TotalTask}");
     }
 
-    public async Task ProcessFilesAsync()
-    {
-        _ = await this.PathsQueue
-            .ToObservable()
-            .Select(p => Observable.FromAsync(async () =>
-            {
-                 await ExtractAndSaveFileData(p);
-            }))
-            .Merge(500)
-            .LastOrDefaultAsync();
-    }
+   
+        public async Task ProcessFilesAsync()
+        {
+            _ = await this.PathsQueue
+                .ToObservable()
+                .Select(p => Observable.FromAsync(async () =>
+                {
+                     await ExtractAndSaveFileData(p);
+                }))
+                .Merge(20)
+                .LastOrDefaultAsync();
+        }
 
     public async Task Init(string path)
     {
         Log.LogInformation("Init start");
         Stopwatch st = new Stopwatch();
         st.Start();
-        await IndexAllFilesAsync(path);
+        await IndexAllFilesAsyncV2(path);
         st.Stop();
         Log.LogInformation($"index completed in {st.ElapsedMilliseconds} ms.");
         st.Reset();
