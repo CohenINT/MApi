@@ -1,15 +1,19 @@
-﻿using System.Collections.Concurrent;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.Intrinsics.Arm;
+using System.IO;
+using System.Linq;
+using System.Reactive.Linq;
 using System.Security.Cryptography;
+using System.Threading.Tasks;
+using Avalonia.Controls;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using System.Reactive;
-using System.Reactive.Linq;
-using System.Reactive.Threading.Tasks;
+using Formatting = System.Xml.Formatting;
 
-namespace DuplicateFinder.Service;
+namespace AvaloniaApplication1;
 
 public enum StateEnum
 {
@@ -116,7 +120,6 @@ public class DuplicateFinder
         this.SuccedFiles.Add(path);
         Log.LogInformation($"File Process Succeeded for : {path}");
     }
-
     public DuplicateFinder(IServiceProvider svc)
     {
         this.Services = svc;
@@ -128,35 +131,54 @@ public class DuplicateFinder
     }
 
 
-    public async Task<string> ExportIndexToJson(string pathToSave = "")
+    public async Task<string> ExportIndexToJson(string pathToSave  , ProgressBar progressBarJson)
     {
         var strData = "";
         try
         {
-            strData = JsonConvert.SerializeObject(this.FileNames, Formatting.Indented);
+
+            progressBarJson.Value = 30;
+            strData = JsonConvert.SerializeObject(this.FileNames,Newtonsoft.Json.Formatting.Indented);
             if (!string.IsNullOrEmpty(pathToSave))
                 await File.WriteAllTextAsync(pathToSave, strData);
+            progressBarJson.Value = 60;
         }
         catch (Exception e)
         {
             Log.LogError(e, $"failed to convert the data to json format string");
         }
         Log.LogInformation($"Exported completed to {pathToSave}.  amount of paths: {this.PathsQueue.Count}. total files: {this.FileNames.Count}.");
+        progressBarJson.Value = 100;
         return strData;
     }
 
-    
-    
-    public async Task IndexAllFilesAsyncV2(string pathToFolder)
+    private void AdvanceProgress(ProgressBar pr)
+    {
+        try
+        {
+            if (pr.Value < 90)
+            {
+                pr.Value += 5;
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+       
+    }
+    public async Task IndexAllFilesAsyncV2(string pathToFolder, ProgressBar progressBarIndex)
     {
         _ = await Directory.GetFileSystemEntries(pathToFolder)
             .ToObservable()
             .Select(fd => Observable.FromAsync(async () =>
             {
+                AdvanceProgress(progressBarIndex);
                 if (Directory.Exists(fd))
                 {
                     // directory
-                    return IndexAllFilesAsyncV2(fd);
+                    return IndexAllFilesAsyncV2(fd,progressBarIndex);
                 }
 
                 else if (File.Exists(fd))
@@ -169,6 +191,10 @@ public class DuplicateFinder
             }))
             .Merge(10)
             .LastOrDefaultAsync();
+
+        progressBarIndex.Value = 100;
+        progressBarIndex.UpdateLayout();
+
     }
     public async Task IndexAllFilesAsync(string pathToFolder)
     {
@@ -196,30 +222,30 @@ public class DuplicateFinder
     }
 
    
-        public async Task ProcessFilesAsync()
+        public async Task ProcessFilesAsync(ProgressBar progressBarFileProcess)
         {
             _ = await this.PathsQueue
                 .ToObservable()
                 .Select(p => Observable.FromAsync(async () =>
                 {
-                     await ExtractAndSaveFileData(p);
+                    try
+                    {
+                        await ExtractAndSaveFileData(p);
+                    }
+                    catch (Exception e)
+                    {
+                         
+                    } 
+                  
+                     
+                     AdvanceProgress(progressBarFileProcess);
                 }))
+                .Retry(2)
                 .Merge(20)
                 .LastOrDefaultAsync();
+            
+            progressBarFileProcess.Value= 100;
         }
 
-    public async Task Init(string path)
-    {
-        // Log.LogInformation("Init start");
-        // Stopwatch st = new Stopwatch();
-        // st.Start();
-        // await IndexAllFilesAsyncV2(path);
-        // st.Stop();
-        // Log.LogInformation($"index completed in {st.ElapsedMilliseconds} ms.");
-        // st.Reset();
-        // st.Start();
-        // await ProcessFilesAsync();
-        // st.Stop();
-        // Log.LogInformation($"ProcessFile completed in {st.ElapsedMilliseconds} ms.");
-    }
+ 
 }
