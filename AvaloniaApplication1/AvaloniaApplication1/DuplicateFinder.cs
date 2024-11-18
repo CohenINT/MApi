@@ -8,6 +8,7 @@ using System.Reactive.Linq;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -152,18 +153,22 @@ public class DuplicateFinder
         return strData;
     }
 
-    private void AdvanceProgress(ProgressBar pr)
+    private  async Task AdvanceProgress(ProgressBar pr)
     {
         try
         {
-            if (pr.Value < 90)
+            Dispatcher.UIThread.InvokeAsync(() =>
             {
-                pr.Value += 5;
-            }
+                if (pr.Value < 90)
+                {
+                    pr.Value += 5;
+                }
+            });
+            
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            Log.LogError(e, $"Failed to advance progress ");
             throw;
         }
        
@@ -174,7 +179,7 @@ public class DuplicateFinder
             .ToObservable()
             .Select(fd => Observable.FromAsync(async () =>
             {
-                AdvanceProgress(progressBarIndex);
+              await  AdvanceProgress(progressBarIndex);
                 if (Directory.Exists(fd))
                 {
                     // directory
@@ -234,11 +239,11 @@ public class DuplicateFinder
                     }
                     catch (Exception e)
                     {
-                         
+                         Log.LogError(e, $"Failed to extract file data from path: {p}");
+                         this.FailedFiles.Add(p);
                     } 
-                  
-                     
-                     AdvanceProgress(progressBarFileProcess);
+                    
+                    await  AdvanceProgress(progressBarFileProcess);
                 }))
                 .Retry(2)
                 .Merge(20)
