@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using MApi.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MApi.Controllers
@@ -18,10 +19,16 @@ namespace MApi.Controllers
 
 
         [HttpGet]
+        [ProducesResponseType(typeof(ResponseBase<dynamic>),200)]
         public async Task<JsonResult> GetSomeData()
         {
             var aa = this.config.ApplicationConfiguration.Worker.Active;
-            return Json(new { worker = aa });
+            if (aa)
+            {
+                return ResponseBase<dynamic>.Ok(aa);
+            }
+            else
+                return ResponseBase<dynamic>.Failed("bad request");
         }
 
     }
